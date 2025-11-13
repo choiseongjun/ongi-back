@@ -8,8 +8,8 @@ import (
 )
 
 type UserSimilarity struct {
-	User       models.User
-	Similarity float64
+	User       models.User `json:"user"`
+	Similarity float64     `json:"similarity"`
 }
 
 // 유클리드 거리 기반 유사도 계산
@@ -31,7 +31,7 @@ func calculateSimilarity(profile1, profile2 *models.UserProfile) float64 {
 	return similarity
 }
 
-func GetSimilarUsers(userID uint, limit int) ([]models.User, error) {
+func GetSimilarUsers(userID uint, limit int) ([]UserSimilarity, error) {
 	var userProfile models.UserProfile
 	err := database.DB.Where("user_id = ?", userID).First(&userProfile).Error
 	if err != nil {
@@ -56,23 +56,26 @@ func GetSimilarUsers(userID uint, limit int) ([]models.User, error) {
 		})
 	}
 
+	// 70% 이상 유사도만 필터링
+	var filteredSimilarities []UserSimilarity
+	for _, sim := range similarities {
+		if sim.Similarity >= 70.0 {
+			filteredSimilarities = append(filteredSimilarities, sim)
+		}
+	}
+
 	// 유사도 높은 순으로 정렬
-	sort.Slice(similarities, func(i, j int) bool {
-		return similarities[i].Similarity > similarities[j].Similarity
+	sort.Slice(filteredSimilarities, func(i, j int) bool {
+		return filteredSimilarities[i].Similarity > filteredSimilarities[j].Similarity
 	})
 
 	// 상위 N명 반환
-	var users []models.User
 	maxResults := limit
-	if len(similarities) < maxResults {
-		maxResults = len(similarities)
+	if len(filteredSimilarities) < maxResults {
+		maxResults = len(filteredSimilarities)
 	}
 
-	for i := 0; i < maxResults; i++ {
-		users = append(users, similarities[i].User)
-	}
-
-	return users, nil
+	return filteredSimilarities[:maxResults], nil
 }
 
 func GetRecommendedClubs(userID uint, limit int) ([]models.Club, error) {
@@ -113,8 +116,8 @@ func GetClubsWithSimilarMembers(userID uint, limit int) ([]models.Club, error) {
 	}
 
 	var userIDs []uint
-	for _, user := range similarUsers {
-		userIDs = append(userIDs, user.ID)
+	for _, userSim := range similarUsers {
+		userIDs = append(userIDs, userSim.User.ID)
 	}
 
 	type ClubCount struct {

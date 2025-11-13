@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"fmt"
 	"ongi-back/database"
 	"ongi-back/models"
+	"ongi-back/services"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -75,6 +77,20 @@ func GetUsers(c *fiber.Ctx) error {
 	})
 }
 
+// 성향 분석 함수
+func analyzeTendency(score float64) string {
+	if score >= 80 {
+		return "매우 높음"
+	} else if score >= 60 {
+		return "높음"
+	} else if score >= 40 {
+		return "보통"
+	} else if score >= 20 {
+		return "낮음"
+	}
+	return "매우 낮음"
+}
+
 // 사용자 프로필 조회
 func GetUserProfile(c *fiber.Ctx) error {
 	userID := c.Params("id")
@@ -87,8 +103,35 @@ func GetUserProfile(c *fiber.Ctx) error {
 		})
 	}
 
+	// 사용자 성향 분석
+	tendencies := fiber.Map{
+		"sociality":   fiber.Map{"score": profile.SocialityScore, "level": analyzeTendency(profile.SocialityScore)},
+		"activity":    fiber.Map{"score": profile.ActivityScore, "level": analyzeTendency(profile.ActivityScore)},
+		"intimacy":    fiber.Map{"score": profile.IntimacyScore, "level": analyzeTendency(profile.IntimacyScore)},
+		"immersion":   fiber.Map{"score": profile.ImmersionScore, "level": analyzeTendency(profile.ImmersionScore)},
+		"flexibility": fiber.Map{"score": profile.FlexibilityScore, "level": analyzeTendency(profile.FlexibilityScore)},
+	}
+
+	// 유사 사용자 추천 (70% 이상 유사도)
+	var uid uint
+	if _, err := fmt.Sscanf(userID, "%d", &uid); err == nil {
+		similarUsers, _ := services.GetSimilarUsers(uid, 20) // 상위 20명
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data": fiber.Map{
+				"profile":      profile,
+				"tendencies":   tendencies,
+				"similar_users": similarUsers,
+			},
+		})
+	}
+
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data":    profile,
+		"data": fiber.Map{
+			"profile":    profile,
+			"tendencies": tendencies,
+		},
 	})
 }
