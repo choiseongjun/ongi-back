@@ -1,0 +1,121 @@
+# Default values for ongi-back
+replicaCount: 2
+
+image:
+  repository: ongi-back
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: api.ongi.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: ongi-back-tls
+      hosts:
+        - api.ongi.example.com
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Environment Variables
+env:
+  # Database Configuration
+  DB_HOST: ongi-back-postgresql
+  DB_PORT: "5432"
+  DB_USER: ongi
+  DB_NAME: ongi_db
+  DB_SSLMODE: disable
+
+  # Server Configuration
+  PORT: "8080"
+  ENVIRONMENT: production
+
+# Secrets (should be stored in Kubernetes Secret)
+secrets:
+  DB_PASSWORD: "ongi123"  # Override this in production
+
+# PostgreSQL dependency (optional - can use external DB)
+postgresql:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: bitnami/postgresql
+    tag: "15.4.0-debian-11-r0"
+  auth:
+    username: ongi
+    password: ongi123
+    database: ongi_db
+  primary:
+    persistence:
+      enabled: false
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+# Health check probes
+livenessProbe:
+  httpGet:
+    path: /api/v1/health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /api/v1/health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3

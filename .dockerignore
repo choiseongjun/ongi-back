@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Build artifacts
+bin/
+*.exe
+*.test
+*.out
+
+# Environment
+.env
+.env.*
+
+# Documentation
+*.md
+!README.md
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Kubernetes & Helm
+helm/
+k8s/
+
+# Test files
+*_test.go
+test_*.go
+
+# Dependencies (already handled by go mod)
+vendor/
+
+# Misc
+.DS_Store

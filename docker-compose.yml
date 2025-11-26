@@ -17,6 +17,36 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - ongi-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ongi-backend
+    environment:
+      PORT: 5000
+      ENVIRONMENT: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: ongi_db
+      DB_SSLMODE: disable
+      JWT_SECRET: your-secret-key-change-in-production
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ongi-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+
+networks:
+  ongi-network:
+    driver: bridge

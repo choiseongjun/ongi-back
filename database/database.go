@@ -5,10 +5,11 @@ import (
 	"log"
 	"os"
 
+	"ongi-back/models"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"ongi-back/models"
 )
 
 var DB *gorm.DB
@@ -27,7 +28,7 @@ func Connect() error {
 		Host:     getEnv("DB_HOST", "localhost"),
 		Port:     getEnv("DB_PORT", "5432"),
 		User:     getEnv("DB_USER", "postgres"),
-		Password: getEnv("DB_PASSWORD", "postgres"),
+		Password: getEnv("DB_PASSWORD", "123"),
 		DBName:   getEnv("DB_NAME", "ongi_db"),
 		SSLMode:  getEnv("DB_SSLMODE", "disable"),
 	}
