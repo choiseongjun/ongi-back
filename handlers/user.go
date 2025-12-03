@@ -93,6 +93,92 @@ func analyzeTendency(score float64) string {
 	return "매우 낮음"
 }
 
+// CreateOrUpdateUserProfile 사용자 프로필 생성/수정
+// POST /users/profile
+type CreateUserProfileRequest struct {
+	UserID           uint    `json:"user_id" validate:"required"`
+	SocialityScore   float64 `json:"sociality_score"`
+	ActivityScore    float64 `json:"activity_score"`
+	IntimacyScore    float64 `json:"intimacy_score"`
+	ImmersionScore   float64 `json:"immersion_score"`
+	FlexibilityScore float64 `json:"flexibility_score"`
+	ResultSummary    string  `json:"result_summary"`
+	ProfileType      string  `json:"profile_type"`
+}
+
+func CreateOrUpdateUserProfile(c *fiber.Ctx) error {
+	var req CreateUserProfileRequest
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "Invalid request body",
+		})
+	}
+
+	// 사용자 존재 확인
+	var user models.User
+	if err := database.DB.First(&user, req.UserID).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"success": false,
+			"error":   "User not found",
+		})
+	}
+
+	// 기존 프로필 확인
+	var profile models.UserProfile
+	result := database.DB.Where("user_id = ?", req.UserID).First(&profile)
+
+	if result.Error != nil {
+		// 신규 프로필 생성
+		profile = models.UserProfile{
+			UserID:           req.UserID,
+			SocialityScore:   req.SocialityScore,
+			ActivityScore:    req.ActivityScore,
+			IntimacyScore:    req.IntimacyScore,
+			ImmersionScore:   req.ImmersionScore,
+			FlexibilityScore: req.FlexibilityScore,
+			ResultSummary:    req.ResultSummary,
+			ProfileType:      req.ProfileType,
+		}
+
+		if err := database.DB.Create(&profile).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"success": false,
+				"error":   "Failed to create profile",
+			})
+		}
+
+		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+			"success": true,
+			"message": "Profile created successfully",
+			"data":    profile,
+		})
+	}
+
+	// 기존 프로필 업데이트
+	profile.SocialityScore = req.SocialityScore
+	profile.ActivityScore = req.ActivityScore
+	profile.IntimacyScore = req.IntimacyScore
+	profile.ImmersionScore = req.ImmersionScore
+	profile.FlexibilityScore = req.FlexibilityScore
+	profile.ResultSummary = req.ResultSummary
+	profile.ProfileType = req.ProfileType
+
+	if err := database.DB.Save(&profile).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   "Failed to update profile",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"success": true,
+		"message": "Profile updated successfully",
+		"data":    profile,
+	})
+}
+
 // 사용자 프로필 조회
 func GetUserProfile(c *fiber.Ctx) error {
 	userID := c.Params("id")

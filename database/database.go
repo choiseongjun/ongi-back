@@ -66,6 +66,9 @@ func Migrate() error {
 		&models.GuestSession{},
 		&models.GuestAnswer{},
 		&models.SessionVector{},
+		&models.ChatRoom{},
+		&models.ChatRoomMember{},
+		&models.ChatMessage{},
 	)
 
 	if err != nil {

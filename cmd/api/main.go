@@ -5,6 +5,7 @@ import (
 	"ongi-back/config"
 	"ongi-back/database"
 	"ongi-back/routes"
+	"ongi-back/services"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -25,6 +26,9 @@ func main() {
 	if err := database.Migrate(); err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}
+
+	// Initialize WebSocket Hub
+	services.InitHub()
 
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{
