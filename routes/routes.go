@@ -12,7 +12,8 @@ func Setup(app *fiber.App) {
 
 	// Auth routes (인증)
 	auth := api.Group("/auth")
-	auth.Post("/kakao/login", handlers.KakaoLogin)
+	auth.Post("/kakao/login", handlers.KakaoLogin)       // 클라이언트사이드 OAuth
+	auth.Get("/kakao/callback", handlers.KakaoCallback)  // 서버사이드 OAuth 콜백
 
 	// Guest/Session routes (비회원 설문)
 	guest := api.Group("/guest")
