@@ -35,8 +35,8 @@ services:
       DB_NAME: ongi_db
       DB_SSLMODE: disable
       JWT_SECRET: secret_jwt_key
-      KAKAO_CLIENT_ID: 2cf5a303ef1979576a138a3ecaed43a5
-      KAKAO_CLIENT_SECRET: HcKE5PehGCrOulfNELmzl6cqvP1VJKub
+      KAKAO_CLIENT_ID:
+      KAKAO_CLIENT_SECRET: 
       KAKAO_REDIRECT_URI: http://localhost:5000/api/v1/auth/kakao/callback
     ports:
       - "5000:5000"
