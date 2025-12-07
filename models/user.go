@@ -8,6 +8,7 @@ type User struct {
 	ID        uint      `json:"id" gorm:"primaryKey"`
 	Email     string    `json:"email" gorm:"unique;not null"`
 	Name      string    `json:"name" gorm:"not null"`
+	Password  string    `json:"-" gorm:"default:null"` // 비밀번호 (카카오 로그인 시 null)
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

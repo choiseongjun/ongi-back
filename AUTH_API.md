@@ -390,7 +390,51 @@ curl -X POST http://localhost:3000/api/v1/users/profile \
 curl -X GET http://localhost:3000/api/v1/users/1/profile \
   -H "Authorization: Bearer JWT_TOKEN"
 ```
+회원가입
 
+curl -X POST http://localhost:3000/api/v1/auth/register \
+-H "Content-Type: application/json" \
+-d '{                                                                                                                                                               
+"email": "user@example.com",                                                                                                                                      
+"password": "password123",                                                                                                                                        
+"name": "홍길동"                                                                                                                                                  
+}'
+
+응답:
+{
+"success": true,
+"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+"user": {
+"id": 1,
+"email": "user@example.com",
+"name": "홍길동",
+"created_at": "2024-11-13T10:00:00Z",
+"updated_at": "2024-11-13T10:00:00Z"                                                                                                                              
+},
+"is_new_user": true                                                                                                                                                 
+}
+
+로그인
+
+curl -X POST http://localhost:3000/api/v1/auth/login \
+-H "Content-Type: application/json" \
+-d '{                                                                                                                                                               
+"email": "user@example.com",                                                                                                                                      
+"password": "password123"                                                                                                                                         
+}'
+
+응답:
+{
+"success": true,
+"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+"user": {
+"id": 1,
+"email": "user@example.com",
+"name": "홍길동",
+"created_at": "2024-11-13T10:00:00Z",
+"updated_at": "2024-11-13T10:00:00Z"                                                                                                                              
+}
+}
 ---
 
 ## 에러 코드

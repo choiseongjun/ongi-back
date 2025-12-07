@@ -10,6 +10,27 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// RegisterRequest 회원가입 요청
+type RegisterRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=6"`
+	Name     string `json:"name" validate:"required"`
+}
+
+// LoginRequest 로그인 요청
+type LoginRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+}
+
+// AuthResponse 인증 응답
+type AuthResponse struct {
+	Success   bool        `json:"success"`
+	Token     string      `json:"token"`
+	User      models.User `json:"user"`
+	IsNewUser bool        `json:"is_new_user,omitempty"`
+}
+
 // KakaoLoginRequest 카카오 로그인 요청
 type KakaoLoginRequest struct {
 	AccessToken string `json:"access_token" validate:"required"`
@@ -17,10 +38,10 @@ type KakaoLoginRequest struct {
 
 // KakaoLoginResponse 카카오 로그인 응답
 type KakaoLoginResponse struct {
-	Success bool   `json:"success"`
-	Token   string `json:"token"`
-	User    models.User `json:"user"`
-	IsNewUser bool `json:"is_new_user"`
+	Success   bool        `json:"success"`
+	Token     string      `json:"token"`
+	User      models.User `json:"user"`
+	IsNewUser bool        `json:"is_new_user"`
 }
 
 // KakaoLogin 카카오 로그인 처리 (클라이언트사이드 OAuth)
@@ -187,4 +208,147 @@ func processKakaoUser(kakaoUserInfo *services.KakaoUserInfo) (models.User, bool,
 	}
 
 	return user, isNewUser, nil
+}
+
+// Register 일반 회원가입
+// POST /auth/register
+func Register(c *fiber.Ctx) error {
+	var req RegisterRequest
+
+	// 요청 파싱
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "Invalid request body",
+		})
+	}
+
+	// 필수 필드 검증
+	if req.Email == "" || req.Password == "" || req.Name == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "Email, password, and name are required",
+		})
+	}
+
+	// 비밀번호 길이 검증
+	if len(req.Password) < 6 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "Password must be at least 6 characters",
+		})
+	}
+
+	// 이메일 중복 확인
+	var existingUser models.User
+	if err := database.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+			"success": false,
+			"error":   "Email already exists",
+		})
+	}
+
+	// 비밀번호 해싱
+	hashedPassword, err := utils.HashPassword(req.Password)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   "Failed to hash password",
+		})
+	}
+
+	// 사용자 생성
+	user := models.User{
+		Email:    req.Email,
+		Name:     req.Name,
+		Password: hashedPassword,
+	}
+
+	if err := database.DB.Create(&user).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   "Failed to create user",
+			"details": err.Error(),
+		})
+	}
+
+	// JWT 토큰 발급
+	token, err := utils.GenerateJWT(user.ID, user.Email)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   "Failed to generate token",
+		})
+	}
+
+	// 응답 반환
+	return c.Status(fiber.StatusCreated).JSON(AuthResponse{
+		Success:   true,
+		Token:     token,
+		User:      user,
+		IsNewUser: true,
+	})
+}
+
+// Login 일반 로그인
+// POST /auth/login
+func Login(c *fiber.Ctx) error {
+	var req LoginRequest
+
+	// 요청 파싱
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "Invalid request body",
+		})
+	}
+
+	// 필수 필드 검증
+	if req.Email == "" || req.Password == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "Email and password are required",
+		})
+	}
+
+	// 사용자 조회
+	var user models.User
+	if err := database.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"success": false,
+			"error":   "Invalid email or password",
+		})
+	}
+
+	// 비밀번호가 설정되지 않은 경우 (카카오 로그인 사용자)
+	if user.Password == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"success": false,
+			"error":   "This account uses social login. Please use Kakao login.",
+		})
+	}
+
+	// 비밀번호 검증
+	if !utils.CheckPassword(user.Password, req.Password) {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"success": false,
+			"error":   "Invalid email or password",
+		})
+	}
+
+	// JWT 토큰 발급
+	token, err := utils.GenerateJWT(user.ID, user.Email)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   "Failed to generate token",
+		})
+	}
+
+	// 응답 반환
+	return c.Status(fiber.StatusOK).JSON(AuthResponse{
+		Success: true,
+		Token:   token,
+		User:    user,
+	})
 }
